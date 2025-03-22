@@ -9,11 +9,17 @@ BOT_TOKEN = os.getenv("BOT_TOKEN")
 
 bot = telebot.TeleBot(BOT_TOKEN)
 
+# Handle /start command
+@bot.message_handler(commands=['start'])
+def send_welcome(message):
+    bot.reply_to(message, "Welcome!")
+
+# Handle all other messages
 @bot.message_handler(func=lambda message: True)
 def send_hello(message):
     bot.reply_to(message, "hello")
 
-# Start the bot
+# Start the bot in a separate thread
 import threading
 bot_thread = threading.Thread(target=bot.infinity_polling)
 bot_thread.start()
