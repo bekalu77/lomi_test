@@ -6,7 +6,7 @@ import sqlite3
 import time
 import threading
 from flask import Flask
-
+import logging
 
 # Load environment variables
 load_dotenv()
@@ -18,18 +18,18 @@ bot = telebot.TeleBot(BOT_TOKEN)
 
 # User-facing texts (Amharic)
 TEXTS = {
-    "welcome": "እንኳን ደና መጡ! እባክዎ የፁሁፏን ይዘት ይምረጡ",
-    "category_selected": "አሁን መፃፋ ይጀምሩ 🗒️🖊️፣ ሲጨርሱ ፁህፉወ ወደ ሳንሱር ይላካል። 📌 ልብ ይበሉ; ካስፈለገ አንድ አንድ ፎቶ ብቻ ይጠቀሙ። መልካም ግዜ",
+    "welcome": "እንኳን ደና መጡ! እባክዎ �ይዘት ይምረጡ",
+    "category_selected": "አሁን መፃፋ ይጀምሩ 🗒️🖊️፣ ሲጨርሱ ፁህፉወ ወደ ሳንሱር ይላካል። 📌 ልብ ይበሉ; ካስፈለገ �ንድ አንድ ፎቶ ብቻ ይጠቀሙ። መልካም ግዜ",
     "no_category": "ለፁህፉወ ምንም ይዘት አልመረጡም፣ እንደገና ለመጀመር /start ይጫኑ",
-    "unsupported_format": "⚠️ እባክወ ፎቶ ወይም ቪዲዬ ብቻ ይጠቀሙ እና እንደገና ይሞክሩ  /start",
+    "unsupported_format": "⚠️ እባክወ ፎቶ ወይም ቪዲዬ ብቻ �ይጠቀሙ እና እንደገና ይሞክሩ  /start",
     "too_many_pending": "⚠️ ለሳንሱር የተላኩ ብዙ ፁህፎች ስላልወት ትንሽ ቆይተዉ ይሞክሩ",
     "text_too_long": "⚠️ ፁህፋዎ ከ 4000 ፊደላት በላይ ስለሆነ ድጋሚ አስተካክለዉ በ /start ይሞክሩ",
     "story_submitted": "ፁህፋወ ለሳንሱር ተልኳል፣ እባክወ በትግስት ይጠብቁ",
     "story_approved": "✅ ፁህፋወ በ @lomi_reads ቻናል ላይ ተለጥፏል 🎉 ሌላ ለመፃፍ /start ብለዉ ይጀምሩ",
     "story_rejected": "❌ ፁሁፍወ ሳንሱር አላለፈም እንደገና ይሞክሩ /start .",
-    "media_group_warning": "⚠️እባክወ በአንድ ፁህፋ ከ አንድ በላይ ፎቶ ወይም ቪዲዬ አይጠቀሙ እና እንደገና ይሞክሩ /start",
+    "media_group_warning": "⚠️እባክወ በአንድ ፁህፋ ከ አንድ በላይ ፎቶ ወይም ቪዲዬ አይጠቀሙ እና እንደገና �ይሞክሩ /start",
     "pending_limit": "⚠️ ለሳንሱር የተላኩ ብዙ ፁህፎች ስላልወት ትንሽ ቆይተዉ ይሞክሩ",
-    "error_occurred": "⚠️ የሢሥተም ችግር አጋጥሟል። እባክዎ ትንሽ ቆይተዉ ይሞክሩ",
+    "error_occurred": "⚠️ የሢሥተም ችግር አጋጥሟል። እባክዎ ትንሽ ቆይተዉ �ይሞክሩ",
 }
 
 # Define categories for user selection
@@ -48,7 +48,6 @@ CATEGORIES = {
 # Dictionary to buffer media group messages
 media_buffer = {}
 
-
 # Database setup
 class DatabaseConnection:
     def __enter__(self):
@@ -58,7 +57,6 @@ class DatabaseConnection:
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.conn.commit()
         self.conn.close()
-
 
 # Initialize database tables
 with DatabaseConnection() as cursor:
@@ -89,17 +87,14 @@ with DatabaseConnection() as cursor:
         content TEXT)
     """)
 
-
 # Helper functions
 def add_hashtag(text, category):
     hashtag = f"#{category}"
     return f"{text}\n\n{hashtag}" if text and hashtag not in text else text
 
-
 def register_user(user_id):
     with DatabaseConnection() as cursor:
         cursor.execute("INSERT OR IGNORE INTO users (user_id) VALUES (?)", (user_id,))
-
 
 def process_media_group(media_group_id):
     if media_group_id not in media_buffer:
@@ -138,7 +133,6 @@ def process_media_group(media_group_id):
     send_for_review(post_id, [m for m in messages if m.content_type in ['photo', 'video']], text_content)
     bot.send_message(user_id, TEXTS["story_submitted"])
 
-
 def send_for_review(post_id, media_messages, text):
     media_group = []
     for idx, msg in enumerate(media_messages):
@@ -158,22 +152,19 @@ def send_for_review(post_id, media_messages, text):
                InlineKeyboardButton("❌ Reject", callback_data=f"reject_{post_id}"))
     bot.send_message(ADMIN_GROUP_ID, "Please review the submission:", reply_markup=markup)
 
-
 # Handlers
-@bot.message_handler(commands=['start'])
+@bot.message_handler(commands=['start', 'write'])
 def start(message):
     register_user(message.chat.id)
     markup = InlineKeyboardMarkup()
     [markup.add(InlineKeyboardButton(v, callback_data=k)) for k, v in CATEGORIES.items()]
     bot.send_message(message.chat.id, TEXTS["welcome"], reply_markup=markup)
 
-
 @bot.callback_query_handler(func=lambda call: call.data in CATEGORIES)
 def set_category(call):
     with DatabaseConnection() as cursor:
         cursor.execute("UPDATE users SET category = ? WHERE user_id = ?", (call.data, call.message.chat.id))
     bot.send_message(call.message.chat.id, TEXTS["category_selected"])
-
 
 @bot.message_handler(content_types=['text', 'photo', 'video'])
 def handle_submission(message):
@@ -224,7 +215,6 @@ def handle_submission(message):
     send_for_review(post_id, [message] if message.content_type in ['photo', 'video'] else [], text_content)
     bot.send_message(user_id, TEXTS["story_submitted"])
 
-
 @bot.callback_query_handler(func=lambda call: call.data.startswith(('approve_', 'reject_')))
 def handle_review(call):
     action, post_id = call.data.split('_')
@@ -260,13 +250,17 @@ def handle_review(call):
 
     bot.edit_message_reply_markup(ADMIN_GROUP_ID, call.message.message_id, reply_markup=None)
 
-
 # Start polling
-#bot.infinity_polling()
+def start_bot():
+    while True:
+        try:
+            bot.infinity_polling()
+        except Exception as e:
+            logging.error(f"Bot crashed: {e}")
+            time.sleep(5)  # Wait for 5 seconds before restarting
 
 # Start the bot in a separate thread
-import threading
-bot_thread = threading.Thread(target=bot.infinity_polling)
+bot_thread = threading.Thread(target=start_bot)
 bot_thread.start()
 
 # Create a simple web server to keep Render happy
